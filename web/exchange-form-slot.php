@@ -1,6 +1,6 @@
 <?php
 // Enable error display for debugging purposes
-ini_set('display_errors', true);
+ini_set('display_errors', false);
 
 // Include necessary PHP files and classes
 require __DIR__ . '/../lib/Container.php';

@@ -1,5 +1,5 @@
 <?php
-ini_set('display_errors', true);
+ini_set('display_errors', false);
 require __DIR__ . '/../lib/Container.php';
 
 use lib\Container;

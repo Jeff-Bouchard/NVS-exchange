@@ -1,6 +1,6 @@
 <?php
-ini_set('display_errors', true);
-error_reporting(E_ALL);
+ini_set('display_errors', false);
+error_reporting(E_NONE);
 
 require __DIR__ . '/../lib/Container.php';
 

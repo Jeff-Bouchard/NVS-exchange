@@ -1,5 +1,5 @@
 <?php
-ini_set('display_errors', true); // For development only; turn off in production
+ini_set('display_errors', false); // For development only; turn off in production
 require __DIR__ . '/../lib/Container.php';
 require __DIR__ . '/../modules/ExchangeForm.php';
 

@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  nvs-exchange:
+    build: .
+    container_name: nvs-exchange
+    ports:
+      - "8080:80"  # host:container
+    volumes:
+      # Mount your local config if you want to edit it without rebuilding
+      - ./config/config.php:/var/www/html/config/config.php:ro
+      # Optionally mount a SQLite file or other data files if used
+      # - ./data/sqlite.db:/var/www/html/path/to/sqlite.db
+    environment:
+      # Adjust these environment variables if you use them inside config.php
+      # EXAMPLE_EMERCOIN_HOST: "host.docker.internal"
+      # EXAMPLE_NESS_HOST: "host.docker.internal"
+      # You can reference them from PHP via getenv()
+      - TZ=UTC

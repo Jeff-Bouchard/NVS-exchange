@@ -522,9 +522,12 @@ $actual_link = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP
                                     <?= $addr['addr'] ?> 
                                 </span>
 
-                                <button onclick="copy('<?= $addr['addr'] ?>','#copy_button_<?= $name ?>')" id="copy_button_<?= $name ?>" class="btn btn-success copy-button">
-                                    Copy
-                                </button>
+                                <div class="d-flex align-items-center">
+                                    <div id="qr-<?= $name ?>" class="qr-code me-2" style="width: 60px; height: 60px;"></div>
+                                    <button onclick="copy('<?= $addr['addr'] ?>','#copy_button_<?= $name ?>')" id="copy_button_<?= $name ?>" class="btn btn-success copy-button">
+                                        Copy
+                                    </button>
+                                </div>
                             </div>
                         </h2>
                         
@@ -663,7 +666,20 @@ $actual_link = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP
 
         createMatrixRain();
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+    <script>
+        // Generate QR codes for addresses
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php foreach ($slot['addr'] as $name => $addr): ?>
+                QRCode.toCanvas(document.getElementById('qr-<?= $name ?>'), '<?= $addr['addr'] ?>', {
+                    width: 60,
+                    height: 60,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff"
+                });
+            <?php endforeach; ?>
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
     <!-- jQuery script for light/dark mode toggle -->
     <script src="/js/darkmode.js"></script>

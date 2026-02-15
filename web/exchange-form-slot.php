@@ -635,7 +635,7 @@ h2, h3 {
         </div>
         
         <p style="color: grey; font-family: 'Courier New', monospace; font-size: 12pt" 
-        class="ness-to-receive-info <?php if ('activated' === $status): ?>display-ness-to-receive-info<?php endif; ?>">You will receive <?= $slot['recieve'] ?> NESS on your address <b><?= $slot['pay_address'] ?></b> (v2)</p>
+        class="ness-to-receive-info <?php if ('activated' === $status): ?>display-ness-to-receive-info<?php endif; ?>">You will receive <?= $slot['receive'] ?> NESS on your address <b><?= $slot['pay_address'] ?></b> (v2)</p>
         
         <!-- Form for reloading the page -->
         <div class="form-section">
@@ -673,7 +673,7 @@ h2, h3 {
         </p>
         
         <p style="color: grey; font-family: 'Courier New', monospace; font-size: 12pt" 
-        class="ness-amount-received-info <?php if ('done' === $status): ?>display-ness-amount-received-info<?php endif; ?>">You have been paid <?= $slot['recieve'] ?>
+        class="ness-amount-received-info <?php if ('done' === $status): ?>display-ness-amount-received-info<?php endif; ?>">You have been paid <?= $slot['receive'] ?>
          NESS
         </p>
         
@@ -688,8 +688,6 @@ h2, h3 {
         <div 
         class="alert alert-danger <?php if ('error' === $status): ?>show-error<?php endif; ?>" role="alert"><?= nl2br(htmlentities($slot['error'])) ?>
         </div>
-        
-        <?php endif; ?>
         
         <?php else: ?>
         

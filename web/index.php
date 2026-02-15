@@ -374,7 +374,7 @@ if (!empty($_POST['name']) && !empty($_POST['value']) && !empty($_POST['days']))
                     id="address" 
                     name="address" 
                     class="form-input" 
-                    placeholder=" " 
+                    placeholder="E.g., Eabc123def456... or leave empty" 
                     value="<?= $address ?>"
                 >
                 <label for="address" class="form-label">Address (optional)</label>

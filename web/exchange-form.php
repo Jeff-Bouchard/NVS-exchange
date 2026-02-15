@@ -380,6 +380,7 @@ if ($active && !empty($_POST['address']) && !empty($_POST['pay_address'])) {
     
             <button type="submit" class="btn-primary">Create Payment Slot</button>
         </form>
+        <?php endif; ?>
     </div>
     <script>
         function createMatrixRain() {

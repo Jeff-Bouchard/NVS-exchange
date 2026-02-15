@@ -5,7 +5,7 @@ services:
     build: .
     container_name: nvs-exchange
     ports:
-      - "8080:80"  # host:container
+      - "50123:80"  # host:container
     volumes:
       # Mount your local config if you want to edit it without rebuilding
       - ./config/config.php:/var/www/html/config/config.php:ro

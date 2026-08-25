@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 umask 077
 
-addon_version="1.2.0"
+addon_version="1.2.1"
 addon_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 installer_path=$(realpath -e -- "$0")
 action="install"

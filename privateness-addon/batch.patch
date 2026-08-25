@@ -1,8 +1,8 @@
 diff --git a/lib/Emercoin.php b/lib/Emercoin.php
-index 1a458d6..02999f8 100644
+index 1a458d6..3c24a86 100644
 --- a/lib/Emercoin.php
 +++ b/lib/Emercoin.php
-@@ -442,21 +442,50 @@ class Emercoin {
+@@ -442,21 +442,37 @@ class Emercoin {
    public static function names_new($values, $days, $toaddress = '', $valuetype = "") {
      $url = self::$username.':'.self::$password.'@'.self::$address.':'.self::$port.'/';
      self::$rpcClient = new JsonRpcClient($url, self::$debug);
@@ -12,6 +12,10 @@ index 1a458d6..02999f8 100644
 -    if(!empty($toaddress)) {
 -        foreach ($values as $name => $value)
 -            self::$rpcClient->name_new($name, $value, $days, $toaddress);
+-    }
+-    elseif(!empty($valuetype)) {
+-        foreach ($values as $name => $value)
+-            self::$rpcClient->name_new($name, $value, $days, $toaddress, $valuetype);
 +
 +    $pending = [];
 +    foreach ($values as $name => $record) {
@@ -25,41 +29,25 @@ index 1a458d6..02999f8 100644
 +        }
 +        if ($existing !== null) {
 +            if (isset($existing['value']) && $existing['value'] === $value) {
-+                continue; // idempotent retry after a completed chunk
++                continue;
 +            }
 +            throw new \RuntimeException("NVS name already exists with a different value: " . $name);
 +        }
-+        $op = ['NEW' => $name, 'value' => $value, 'days' => $recordDays];
-+        if (!empty($toaddress)) {
-+            $op['toaddress'] = $toaddress;
-+        }
-+        if (!empty($valuetype)) {
-+            $op['valuetype'] = $valuetype;
-+        }
-+        $pending[] = $op;
-     }
--    elseif(!empty($valuetype)) {
--        foreach ($values as $name => $value)
--            self::$rpcClient->name_new($name, $value, $days, $toaddress, $valuetype);
-+
-+    $txids = [];
-+    $chunk = [];
-+    $estimatedBytes = 0;
-+    foreach ($pending as $op) {
-+        $nextBytes = strlen($op['NEW']) + strlen($op['value']) + 220;
-+        if (!empty($chunk) && (count($chunk) >= 100 || $estimatedBytes + $nextBytes > 70000)) {
-+            $txids[] = self::$rpcClient->name_updatemany($chunk);
-+            $chunk = [];
-+            $estimatedBytes = 0;
-+        }
-+        $chunk[] = $op;
-+        $estimatedBytes += $nextBytes;
++        $pending[] = ['name' => $name, 'value' => $value, 'days' => $recordDays];
      }
 -    else {
 -        foreach ($values as $name => $value)
 -            self::$rpcClient->name_new($name, $value, $days);
-+    if (!empty($chunk)) {
-+        $txids[] = self::$rpcClient->name_updatemany($chunk);
++
++    $txids = [];
++    foreach ($pending as $op) {
++        if (!empty($toaddress)) {
++            $txids[] = self::$rpcClient->name_new($op['name'], $op['value'], $op['days'], $toaddress);
++        } elseif (!empty($valuetype)) {
++            $txids[] = self::$rpcClient->name_new($op['name'], $op['value'], $op['days'], $toaddress, $valuetype);
++        } else {
++            $txids[] = self::$rpcClient->name_new($op['name'], $op['value'], $op['days']);
++        }
      }
 +    return $txids;
    }

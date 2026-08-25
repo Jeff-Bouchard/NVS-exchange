@@ -31,7 +31,7 @@ if (!$ok || $doc->documentElement->tagName !== 'nameBatch') {
 
 $root = $doc->documentElement;
 if ($root->getAttribute('version') !== '1' ||
-    $root->getAttribute('rpc') !== 'name_updatemany' ||
+    $root->getAttribute('execution') !== 'sequential-name-new' ||
     !preg_match('/^[0-9a-f]{32}$/', $root->getAttribute('id'))) {
     http_response_code(400);
     die("Unsupported batch envelope\n");

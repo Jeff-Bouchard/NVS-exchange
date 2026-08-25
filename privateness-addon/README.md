@@ -1,11 +1,16 @@
 # NVS Exchange multi-name batch addon
 
 This server addon is required by the Pocket Node batch button. It upgrades the
-current `NESS-Network/NVS-exchange` code so one NCH payment slot can publish
-many independent EmerNVS names using Emercoin 0.8+ `name_updatemany`.
+current `NESS-Network/NVS-exchange` code so one NCH payment slot can authorize
+many independent EmerNVS names using Emercoin's real singular `name_new` RPC.
 
 It does **not** collapse agents into one aggregate NVS value. Every
 `worm:<random-id>` remains independently retrievable with `name_show`.
+
+The efficiency boundary is the payer's NESS transaction: 250 records share one
+NCH payment address and require one payer spend. The exchange subsequently
+executes up to 250 ordinary Emercoin `name_new` calls from its own Emercoin
+wallet. This does not pretend Emercoin exposes a multi-name RPC.
 
 ## Safe installation on the nvs.ness.cx server
 
@@ -99,9 +104,9 @@ it as a URL rather than a search phrase.
   record minimum cannot accidentally release a 250-record batch.
 - The payer makes one NESS transaction to the exchange, so the NCH burn is
   applied once for the whole payment instead of once per agent.
-- The exchange uses `name_updatemany` and size-bounded chunks internally.
-  Completed chunks are detected by exact `name_show` value comparison, making
-  a retry safe after a partial server interruption.
+- The exchange performs singular `name_new` operations internally after one
+  batch payment. Completed records are detected by exact `name_show` value
+  comparison, making a retry safe after a partial server interruption.
 - The endpoint validates every Ed25519 `objectAnchor` signature before creating
   a payment slot. The batch contains public commitments only—never mnemonics,
   secret keys, labels, capabilities, or decrypted WORM transitions.

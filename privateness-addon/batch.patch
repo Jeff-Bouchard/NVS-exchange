@@ -1,0 +1,155 @@
+diff --git a/lib/Emercoin.php b/lib/Emercoin.php
+index 1a458d6..02999f8 100644
+--- a/lib/Emercoin.php
++++ b/lib/Emercoin.php
+@@ -442,21 +442,50 @@ class Emercoin {
+   public static function names_new($values, $days, $toaddress = '', $valuetype = "") {
+     $url = self::$username.':'.self::$password.'@'.self::$address.':'.self::$port.'/';
+     self::$rpcClient = new JsonRpcClient($url, self::$debug);
+-    
+-    //return self::$rpcClient->name_new($name, $value, $days);
+-    
+-    if(!empty($toaddress)) {
+-        foreach ($values as $name => $value)
+-            self::$rpcClient->name_new($name, $value, $days, $toaddress);
++
++    $pending = [];
++    foreach ($values as $name => $record) {
++        $value = is_array($record) ? $record['value'] : $record;
++        $recordDays = is_array($record) ? (int) $record['days'] : (int) $days;
++        $existing = null;
++        try {
++            $existing = self::$rpcClient->name_show($name);
++        } catch (\Exception $e) {
++            // Not found: include it in the NEW transaction.
++        }
++        if ($existing !== null) {
++            if (isset($existing['value']) && $existing['value'] === $value) {
++                continue; // idempotent retry after a completed chunk
++            }
++            throw new \RuntimeException("NVS name already exists with a different value: " . $name);
++        }
++        $op = ['NEW' => $name, 'value' => $value, 'days' => $recordDays];
++        if (!empty($toaddress)) {
++            $op['toaddress'] = $toaddress;
++        }
++        if (!empty($valuetype)) {
++            $op['valuetype'] = $valuetype;
++        }
++        $pending[] = $op;
+     }
+-    elseif(!empty($valuetype)) {
+-        foreach ($values as $name => $value)
+-            self::$rpcClient->name_new($name, $value, $days, $toaddress, $valuetype);
++
++    $txids = [];
++    $chunk = [];
++    $estimatedBytes = 0;
++    foreach ($pending as $op) {
++        $nextBytes = strlen($op['NEW']) + strlen($op['value']) + 220;
++        if (!empty($chunk) && (count($chunk) >= 100 || $estimatedBytes + $nextBytes > 70000)) {
++            $txids[] = self::$rpcClient->name_updatemany($chunk);
++            $chunk = [];
++            $estimatedBytes = 0;
++        }
++        $chunk[] = $op;
++        $estimatedBytes += $nextBytes;
+     }
+-    else {
+-        foreach ($values as $name => $value)
+-            self::$rpcClient->name_new($name, $value, $days);
++    if (!empty($chunk)) {
++        $txids[] = self::$rpcClient->name_updatemany($chunk);
+     }
++    return $txids;
+   }
+   
+   public static function name_update( $name, $value, $days, $toaddress='', $valuetype='') {
+diff --git a/lib/Slots.php b/lib/Slots.php
+index 06b8ae4..4e9f8f8 100644
+--- a/lib/Slots.php
++++ b/lib/Slots.php
+@@ -21,7 +21,7 @@ class Slots {
+         $this->wallets = $wallets;
+     }
+ 
+-    public function createSlot(string $key, string $value, string $address = '', $days = 100): string
++    public function createSlot(string $key, string $value, string $address = '', $days = 100, int $units = 1): string
+     {
+         $slot_id = md5(rand(10000, 99999) . time());
+         $daysx100 = ceil($days / 100);
+@@ -35,7 +35,7 @@ class Slots {
+                 $addr[$wallet->getWalletName()] = [
+                     'addr' => $genAddress,
+                     'descr' => $wallet->getWalletDescription(),
+-                    'min_sum' => $wallet->getMinSum($daysx100),
++                    'min_sum' => $wallet->getMinSum($daysx100) * max(1, $units),
+                     'days' => $days
+                 ];
+             }
+@@ -76,6 +76,16 @@ class Slots {
+     public function regenerateSlot(string $slot_id)
+     {
+         $slot = $this->showSlot($slot_id);
++        $units = 1;
++        if (strpos($slot['name'], 'batch:') === 0) {
++            $doc = new \DOMDocument();
++            if ($doc->loadXML($slot['value'], LIBXML_NONET | LIBXML_NOBLANKS) &&
++                $doc->documentElement->tagName === 'nameBatch') {
++                $units = max(1, (int) $doc->documentElement->getAttribute('count'));
++            }
++        }
++        $days = (int) $slot['addr']['EMC']['days'];
++        $daysx100 = (int) ceil($days / 100);
+ 
+         foreach ($this->wallets as $wallet) {
+             $genAddress = $wallet->generateAddress();
+@@ -84,8 +94,8 @@ class Slots {
+                 $addr[$wallet->getWalletName()] = [
+                     'addr' => $genAddress,
+                     'descr' => $wallet->getWalletDescription(),
+-                    'min_sum' => $wallet->getMinSum($slot['addr']['EMC']['days']),
+-                    'days' => $slot['addr']['EMC']['days']
++                    'min_sum' => $wallet->getMinSum($daysx100) * $units,
++                    'days' => $days
+                 ];
+             }
+         }
+@@ -187,10 +197,28 @@ class Slots {
+             return false;
+         }
+ 
++        $isBatch = strpos($slot['name'], 'batch:') === 0;
+         foreach ($this->wallets as $wallet) {
+             $wname = $wallet->getWalletName();
+-            if (isset($addrs[$wname]) && $wallet->checkRecievedByAddress($addrs[$wname]['addr'])) {
+-                if (!empty($slot['address'])) {
++            $batchPaid = $isBatch && isset($addrs[$wname]) &&
++                (float) $wallet->getRecievedByAddress($addrs[$wname]['addr']) >= (float) $addrs[$wname]['min_sum'];
++            if (isset($addrs[$wname]) && ($batchPaid || (!$isBatch && $wallet->checkRecievedByAddress($addrs[$wname]['addr'])))) {
++                if ($isBatch) {
++                    $doc = new \DOMDocument();
++                    if (!$doc->loadXML($slot['value'], LIBXML_NONET | LIBXML_NOBLANKS) ||
++                        $doc->documentElement->tagName !== 'nameBatch') {
++                        throw new \RuntimeException('Invalid stored nameBatch');
++                    }
++                    $records = [];
++                    foreach ($doc->documentElement->getElementsByTagName('record') as $record) {
++                        $valueNode = $record->getElementsByTagName('value')->item(0);
++                        $records[$record->getAttribute('name')] = [
++                            'value' => $valueNode->textContent,
++                            'days' => (int) $record->getAttribute('days')
++                        ];
++                    }
++                    Emercoin::names_new($records, $addrs[$wname]['days'], $slot['address']);
++                } elseif (!empty($slot['address'])) {
+                     Emercoin::name_new($slot['name'], $slot['value'], $addrs[$wname]['days'], $slot['address']);
+                 } else {
+                     Emercoin::name_new($slot['name'], $slot['value'], $addrs[$wname]['days']);
+@@ -245,4 +273,4 @@ class Slots {
+             $this->processUpdatedSlot($slot['slot_id']);
+         }
+     }
+-}
+\ No newline at end of file
++}

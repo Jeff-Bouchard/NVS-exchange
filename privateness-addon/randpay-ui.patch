@@ -1,0 +1,17 @@
+diff --git a/web/slot.php b/web/slot.php
+--- a/web/slot.php
++++ b/web/slot.php
+@@ -584,6 +584,13 @@ $actual_link = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP
+                     Name-Value record created or updated !
+                 </div>
+ 
++                <?php if ($show_payments && isset($slot['addr']['EMC'])): ?>
++                    <a class="btn btn-primary eddit-NVS" href="/randpay.php?slot=<?= rawurlencode($slot['slot_id']) ?>">
++                        Native EMC RandPay · expected-value settlement
++                    </a>
++                    <p style="font-size:12px">A valid win or loss serves the complete slot. Exact one-transaction NCH payment remains available above.</p>
++                <?php endif; ?>
++
+                 <form method="POST" class="money-send-conf-form <?php if ((!isset($result) || (false === $result)) && !$outer_address): ?>display-money-send-conf-form<?php endif; ?>">
+                     <input type="hidden" name="check" value="" />
+ 

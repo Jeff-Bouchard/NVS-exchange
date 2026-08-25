@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 umask 077
 
-addon_version="1.2.1"
+addon_version="1.3.0"
 addon_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 installer_path=$(realpath -e -- "$0")
 action="install"
@@ -59,6 +59,7 @@ managed=(
   web/exchange-form.php
   web/exchange-form-slot.php
   web/batch.php
+  web/randpay.php
   web/js/ness-qrcode.js
 )
 required=(
@@ -140,7 +141,9 @@ if [[ -r "$state_dir/install-info" ]] && grep -qx "version=$addon_version" "$sta
   php -l "$target/lib/Emercoin.php"
   php -l "$target/lib/Slots.php"
   php -l "$target/web/batch.php"
+  php -l "$target/web/randpay.php"
   [[ -s "$target/web/js/ness-qrcode.js" ]]
+  grep -q 'Native EMC RandPay' "$target/web/slot.php"
   echo "NVS batch/UI addon $addon_version is already installed and passes basic checks."
   exit 0
 fi
@@ -171,18 +174,23 @@ for source_dir in lib decoders modules wallets web; do
 done
 
 patch --batch --forward --dry-run -d "$stage/root" -p1 < "$addon_dir/batch.patch"
+patch --batch --forward --dry-run -d "$stage/root" -p1 < "$addon_dir/randpay.patch"
 patch --batch --forward --dry-run -d "$stage/root" -p1 < "$addon_dir/ui.patch"
 patch --batch --forward -d "$stage/root" -p1 < "$addon_dir/batch.patch"
+patch --batch --forward -d "$stage/root" -p1 < "$addon_dir/randpay.patch"
 patch --batch --forward -d "$stage/root" -p1 < "$addon_dir/ui.patch"
 patch --batch --forward --dry-run -d "$stage/root" -p1 < "$addon_dir/magic.patch"
 patch --batch --forward -d "$stage/root" -p1 < "$addon_dir/magic.patch"
+patch --batch --forward --dry-run -d "$stage/root" -p1 < "$addon_dir/randpay-ui.patch"
+patch --batch --forward -d "$stage/root" -p1 < "$addon_dir/randpay-ui.patch"
 install -m 0644 -- "$addon_dir/web/batch.php" "$stage/root/web/batch.php"
+install -m 0644 -- "$addon_dir/web/randpay.php" "$stage/root/web/randpay.php"
 mkdir -p "$stage/root/web/js"
 install -m 0644 -- "$addon_dir/web/js/ness-qrcode.js" "$stage/root/web/js/ness-qrcode.js"
 
 for relative in \
   lib/Emercoin.php lib/Slots.php web/index.php web/edit.php web/slot.php \
-  web/exchange-form.php web/exchange-form-slot.php web/batch.php; do
+  web/exchange-form.php web/exchange-form-slot.php web/batch.php web/randpay.php; do
   php -l "$stage/root/$relative"
 done
 smoke_output=$(REQUEST_METHOD=GET php "$stage/root/web/batch.php")
@@ -195,6 +203,7 @@ smoke_output=$(REQUEST_METHOD=GET php "$stage/root/web/batch.php")
 [[ $(grep -c 'data-magic-link=' "$stage/root/web/slot.php") -eq 1 ]]
 grep -q "https://sd.ness.cx/" "$stage/root/web/slot.php"
 grep -q 'value="<?= htmlspecialchars($name' "$stage/root/web/index.php"
+grep -q 'Native EMC RandPay' "$stage/root/web/slot.php"
 
 if [[ "$action" == "check" ]]; then
   echo "Preflight passed. No server files, database, configuration, or service were changed."
@@ -205,6 +214,23 @@ for writable in "$target/lib" "$target/web"; do
   [[ -w "$writable" ]] || { echo "Directory is not writable: $writable" >&2; exit 1; }
 done
 mkdir -p "$state_dir/backups"
+randpay_key="$state_dir/randpay.key"
+randpay_receipts="$state_dir/randpay-receipts"
+if [[ -L "$randpay_key" ]]; then
+  echo "Refusing RandPay key symlink: $randpay_key" >&2
+  exit 1
+fi
+if [[ -e "$randpay_key" ]]; then
+  [[ -f "$randpay_key" && $(wc -c < "$randpay_key") -eq 32 ]] || {
+    echo "RandPay key must be a 32-byte regular file: $randpay_key" >&2
+    exit 1
+  }
+else
+  php -r '$key = random_bytes(32); if (file_put_contents($argv[1], $key, LOCK_EX) !== 32) exit(1);' "$randpay_key"
+  chmod 0600 "$randpay_key"
+fi
+mkdir -p "$randpay_receipts"
+chmod 0700 "$randpay_receipts"
 if command -v flock >/dev/null 2>&1; then
   exec 9>"$state_dir/install.lock"
   flock -n 9 || { echo "Another batch-addon installation is running." >&2; exit 1; }
@@ -234,7 +260,7 @@ done
 
 for relative in \
   lib/Emercoin.php lib/Slots.php web/index.php web/edit.php web/slot.php \
-  web/exchange-form.php web/exchange-form-slot.php web/batch.php; do
+  web/exchange-form.php web/exchange-form-slot.php web/batch.php web/randpay.php; do
   php -l "$target/$relative"
 done
 installed_smoke=$(REQUEST_METHOD=GET php "$target/web/batch.php")

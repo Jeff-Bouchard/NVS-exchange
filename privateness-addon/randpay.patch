@@ -1,0 +1,82 @@
+--- a/lib/Emercoin.php
++++ b/lib/Emercoin.php
+@@ -474,6 +474,24 @@
+     }
+     return $txids;
+   }
++
++  public static function randpay_mkchap($amount, $risk, $timeout) {
++    $url = self::$username.':'.self::$password.'@'.self::$address.':'.self::$port.'/';
++    self::$rpcClient = new JsonRpcClient($url, self::$debug);
++    return self::$rpcClient->randpay_mkchap($amount, (int) $risk, (int) $timeout);
++  }
++
++  public static function decode_raw_transaction($rawtx) {
++    $url = self::$username.':'.self::$password.'@'.self::$address.':'.self::$port.'/';
++    self::$rpcClient = new JsonRpcClient($url, self::$debug);
++    return self::$rpcClient->decoderawtransaction($rawtx);
++  }
++
++  public static function randpay_accept($rawtx, $flags = 2) {
++    $url = self::$username.':'.self::$password.'@'.self::$address.':'.self::$port.'/';
++    self::$rpcClient = new JsonRpcClient($url, self::$debug);
++    return self::$rpcClient->randpay_accept($rawtx, (int) $flags);
++  }
+   
+   public static function name_update( $name, $value, $days, $toaddress='', $valuetype='') {
+     $url = self::$username.':'.self::$password.'@'.self::$address.':'.self::$port.'/';
+--- a/lib/Slots.php
++++ b/lib/Slots.php
+@@ -232,6 +232,52 @@
+         return false;
+     }
+ 
++    public function processAuthorizedSlot(string $slot_id): bool
++    {
++        $slot = $this->db->getSlot($slot_id);
++        if (empty($slot)) {
++            throw new \RuntimeException('Slot not found');
++        }
++        if ('PAYED' === $slot['status']) {
++            return true;
++        }
++        if ('GENERATED' !== $slot['status'] && 'UPDATED' !== $slot['status']) {
++            throw new \RuntimeException('Slot is not payable');
++        }
++
++        $addrs = json_decode($slot['addr'], true);
++        if (empty($addrs) || empty($addrs['EMC']['days'])) {
++            throw new \RuntimeException('Slot lacks an Emercoin quote');
++        }
++        $days = (int) $addrs['EMC']['days'];
++        $isBatch = strpos($slot['name'], 'batch:') === 0;
++        if ($isBatch) {
++            $doc = new \DOMDocument();
++            if (!$doc->loadXML($slot['value'], LIBXML_NONET | LIBXML_NOBLANKS) ||
++                $doc->documentElement->tagName !== 'nameBatch') {
++                throw new \RuntimeException('Invalid stored nameBatch');
++            }
++            $records = [];
++            foreach ($doc->documentElement->getElementsByTagName('record') as $record) {
++                $valueNode = $record->getElementsByTagName('value')->item(0);
++                $records[$record->getAttribute('name')] = [
++                    'value' => $valueNode->textContent,
++                    'days' => (int) $record->getAttribute('days')
++                ];
++            }
++            Emercoin::names_new($records, $days, $slot['address']);
++        } elseif ('UPDATED' === $slot['status']) {
++            Emercoin::name_update($slot['name'], $slot['value'], $days, $slot['address']);
++        } elseif (!empty($slot['address'])) {
++            Emercoin::name_new($slot['name'], $slot['value'], $days, $slot['address']);
++        } else {
++            Emercoin::name_new($slot['name'], $slot['value'], $days);
++        }
++
++        $this->db->setSlotPayed($slot_id);
++        return true;
++    }
++
+     public function processUpdatedSlot(string $slot_id)
+     {
+         $slot = $this->db->getSlot($slot_id);

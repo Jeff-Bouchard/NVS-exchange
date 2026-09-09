@@ -5,10 +5,9 @@ return [
         'host' => 'localhost',
         'port' => '6660',
         'wallets' => [
-            '2021_12_02_fdgh.wlt' => '123456789$',
-            '2022_06_15_fada.wlt' => 'qwerty'
+            'example-wallet.wlt' => '' // Set the actual password only in config.php.
         ],
-        'main_wallet_id' => '2021_12_02_fdgh.wlt',
+        'main_wallet_id' => 'example-wallet.wlt',
         'prefix' => 'http://',
         /** Generate new address for new slot or use existing one */
         'gen_address' => true
@@ -20,6 +19,7 @@ return [
         'password' => ''
     ],
     'db' => [
+        'filename' => '../data/exchange.db',
         'host' => 'localhost',
         'user' => '',
         'password' => '',

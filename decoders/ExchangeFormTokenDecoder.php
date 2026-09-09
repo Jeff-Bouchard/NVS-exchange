@@ -15,9 +15,11 @@ class ExchangeFormTokenDecoder implements iDecoder {
 
     public function encodeValue(array $fields): string
     {
+        $address = htmlspecialchars($fields['address'], ENT_QUOTES | ENT_XML1, 'UTF-8');
+        $payAddress = htmlspecialchars($fields['pay_address'], ENT_QUOTES | ENT_XML1, 'UTF-8');
         return <<<WORM
 <worm>
-    <token type="ness-exchange-v1-v2" address="$fields[address]" pay_address="$fields[pay_address]"/>
+    <token type="ness-exchange-v1-v2" address="$address" pay_address="$payAddress"/>
 </worm> 
 WORM;
     }
@@ -26,7 +28,11 @@ WORM;
     {
         $xmlString = preg_replace("/<!--.+?-->/i", '', $value);
         $xmlString = preg_replace('/”/i', '"', $xmlString);
-        $xmlObject = simplexml_load_string($xmlString);
+        if (stripos($xmlString, '<!DOCTYPE') !== false || stripos($xmlString, '<!ENTITY') !== false) {
+            throw new \InvalidArgumentException('Invalid exchange token');
+        }
+        $xmlObject = simplexml_load_string($xmlString, 'SimpleXMLElement', LIBXML_NONET);
+        if ($xmlObject === false || !isset($xmlObject->token)) { throw new \InvalidArgumentException('Invalid exchange token'); }
 
         $address = (string) $xmlObject->token['address'];
         $pay_address = (string) $xmlObject->token['pay_address'];

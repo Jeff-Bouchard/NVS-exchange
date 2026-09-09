@@ -1,5 +1,11 @@
 <?php
 ini_set('display_errors', false);
+// Optional shared portal entry; legacy POST and editor paths remain available.
+$portal = getenv('FAUCET_PORTAL_URL');
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $portal && preg_match('~^(https://[^\s]+|/(?!/)[^\s]*)$~D', $portal)) {
+    header('Location: ' . $portal . '#nvs', true, 302);
+    exit;
+}
 require __DIR__ . '/../lib/Container.php';
 
 use lib\Container;

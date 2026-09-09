@@ -35,7 +35,7 @@ class ExchangeForm extends BaseModule {
 
     public function pingExchangeForm(): bool
     {
-        $data = file_get_contents($this->url);
+        $data = file_get_contents($this->url, false, stream_context_create(['http' => ['timeout' => 10]]));
         $data = json_decode($data, true);
         return isset($data['status']);
     }
@@ -47,7 +47,7 @@ class ExchangeForm extends BaseModule {
 
     private function loadToken(string $addr, string $payAddr): array
     {
-        $token = file_get_contents($this->url . "?address=$addr&pay_address=$payAddr");
+        $token = file_get_contents($this->url . (strpos($this->url, '?') === false ? '?' : '&') . http_build_query(['address' => $addr, 'pay_address' => $payAddr]), false, stream_context_create(['http' => ['timeout' => 10]]));
         return json_decode($token, true);
     }
 

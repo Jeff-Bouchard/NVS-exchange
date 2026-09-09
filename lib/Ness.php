@@ -78,7 +78,6 @@ class Ness {
 
   public function createAddr(): string 
   {
-    echo 2;
     $responce = file_get_contents($this->prefix . $this->host . ":" . $this->port . "/api/v1/csrf");
 
     if (empty($responce)) {
@@ -96,6 +95,8 @@ class Ness {
 
     $ch = curl_init($this->prefix . $this->host . ":" . $this->port . "/api/v1/wallet/newAddress");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('X-CSRF-Token: '.$token));
     curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
@@ -130,6 +131,8 @@ class Ness {
 
     $ch = curl_init($this->prefix . $this->host . ":" . $this->port . "/api/v1/wallet/newAddress");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('X-CSRF-Token: '.$token));
     curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
@@ -242,6 +245,8 @@ BODY;
 
     $ch = curl_init($this->prefix . $this->host . ":" . $this->port . "/api/v1/wallet/transaction");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'X-CSRF-Token: '.$token));
     curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
@@ -271,6 +276,8 @@ BODY;
 
     $ch = curl_init($this->prefix . $this->host . ":" . $this->port . "/api/v1/injectTransaction");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'X-CSRF-Token: '.$token));
     curl_setopt($ch, CURLOPT_POSTFIELDS, $body);

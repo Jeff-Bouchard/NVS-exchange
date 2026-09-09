@@ -19,6 +19,11 @@ COPY . /var/www/html
 RUN sed -ri 's#/var/www/html#/var/www/html/web#g' /etc/apache2/sites-available/000-default.conf \
  && sed -ri 's#/var/www/html#/var/www/html/web#g' /etc/apache2/apache2.conf
 
+# Writable portal lock and default SQLite storage.
+RUN mkdir -p /var/www/html/data \
+ && chown -R www-data:www-data /var/www/html/data \
+ && printf 'default_socket_timeout=15\n' > /usr/local/etc/php/conf.d/portal.ini
+
 # Enable Apache mod_rewrite if needed
 RUN a2enmod rewrite
 

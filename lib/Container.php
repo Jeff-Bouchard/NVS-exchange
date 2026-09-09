@@ -10,6 +10,8 @@ require_once __DIR__ . '/../lib/Sqlite.php';
 require_once __DIR__ . '/../lib/Emercoin.php';
 require_once __DIR__ . '/../wallets/Emercoin.php';
 require_once __DIR__ . '/../wallets/NessGen.php';
+require_once __DIR__ . '/../wallets/Ness.php';
+require_once __DIR__ . '/../wallets/NCH.php';
 require_once __DIR__ . '/../wallets/NchGen.php';
 
 use decoders\ExchangeFormDecoder;

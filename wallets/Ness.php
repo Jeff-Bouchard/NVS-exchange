@@ -15,7 +15,7 @@ class Ness implements IWallet {
     {
         $config = require __DIR__ . '/../config/config.php';
         $ness = $config['ness'];
-        $this->ness = new Privateness($ness['host'], (int) $ness['port'], $ness['wallet_id'], $ness['password'], $ness['prefix']);
+        $this->ness = new Privateness($ness['host'], (int) $ness['port'], $ness['wallets'], $ness['main_wallet_id'], $ness['prefix']);
     }
 
     public function getMinSum(int $daysx100): float

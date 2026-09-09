@@ -23,7 +23,7 @@ class Slots {
 
     public function createSlot(string $key, string $value, string $address = '', $days = 100): string
     {
-        $slot_id = md5(rand(10000, 99999) . time());
+        $slot_id = bin2hex(random_bytes(16));
         $daysx100 = ceil($days / 100);
         
         $addr = [];

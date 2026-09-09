@@ -15,9 +15,11 @@ class ExchangeFormDecoder implements iDecoder {
 
     public function encodeValue(array $fields): string
     {
+        $title = htmlspecialchars($fields['title'], ENT_QUOTES | ENT_XML1, 'UTF-8');
+        $url = htmlspecialchars($fields['url'], ENT_QUOTES | ENT_XML1, 'UTF-8');
         return <<<WORM
 <worm>
-    <token type="ness-exchange-v1-v2" title="$fields[title]" url="$fields[url]"/>
+    <exchange type="ness-exchange-v1-v2" title="$title" url="$url"/>
 </worm> 
 WORM;
     }
@@ -26,11 +28,20 @@ WORM;
     {
         $xmlString = preg_replace("/<!--.+?-->/i", '', $value);
         $xmlString = preg_replace('/”/i', '"', $xmlString);
-        $xmlObject = simplexml_load_string($xmlString);
+        if (stripos($xmlString, '<!DOCTYPE') !== false || stripos($xmlString, '<!ENTITY') !== false) {
+            throw new \InvalidArgumentException('Invalid exchange descriptor');
+        }
+        $xmlObject = simplexml_load_string($xmlString, 'SimpleXMLElement', LIBXML_NONET);
+        if ($xmlObject === false) { throw new \InvalidArgumentException('Invalid exchange descriptor'); }
+        // Accept the historical encoder's token element as well as exchange.
+        $entry = isset($xmlObject->exchange) ? $xmlObject->exchange : $xmlObject->token;
 
-        $title = (string) $xmlObject->exchange['title'];
-        $url = (string) $xmlObject->exchange['url'];
+        $title = (string) $entry['title'];
+        $url = (string) $entry['url'];
 
+        if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array(parse_url($url, PHP_URL_SCHEME), ['https', 'http'], true)) {
+            throw new \InvalidArgumentException('Invalid exchange service URL');
+        }
         return [
             "url" => $url,
             "title" => $title,

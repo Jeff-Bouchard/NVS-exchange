@@ -10,7 +10,9 @@ class Sqlite implements iSlotDatabase {
 
     public function __construct($db_filename)
     {
-        $this->connection = new \PDO("sqlite:" . __DIR__ . '/' . $db_filename);
+        $path = substr($db_filename, 0, 1) === '/' ? $db_filename : __DIR__ . '/' . $db_filename;
+        $this->connection = new \PDO("sqlite:" . $path, null, null, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+        $this->connection->exec("PRAGMA busy_timeout = 5000");
 
         $sql = <<<SQL
             CREATE TABLE IF NOT EXISTS `slots` (
